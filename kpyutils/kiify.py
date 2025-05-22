@@ -327,6 +327,8 @@ def yaml_data(cls):
   def the_constr(loader, node):
     # https://github.com/yaml/pyyaml/blob/main/lib/yaml/constructor.py  
     values = loader.construct_mapping(node)
+    import inspect
+    print(inspect.signature(cls.__init__).parameters)
     return cls(**values)
     # return loader.construct_yaml_object(node, cls)
   def the_repr(dumper, data):
