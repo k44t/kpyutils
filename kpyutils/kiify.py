@@ -133,7 +133,7 @@ class StringBuilder:
 
 class KiEnum(Enum):
 
-  def __to_kd__(self, ki_stream):
+  def __kiify__(self, ki_stream):
     ki_stream.stream.print_raw("#" + self.name.lower().replace("_", "-"))
 
 
@@ -325,8 +325,10 @@ def yaml_data(cls):
   tag = "!" + cls.__name__
 
   def the_constr(loader, node):
-    # https://github.com/yaml/pyyaml/blob/main/lib/yaml/constructor.py
-    return loader.construct_yaml_object(node, cls)
+    # https://github.com/yaml/pyyaml/blob/main/lib/yaml/constructor.py  
+    values = loader.construct_mapping(node)
+    return cls(**values)
+    # return loader.construct_yaml_object(node, cls)
   def the_repr(dumper, data):
     # https://github.com/yaml/pyyaml/blob/main/lib/yaml/representer.py
     return dumper.represent_yaml_object(tag, data, cls)
@@ -335,3 +337,34 @@ def yaml_data(cls):
   yaml.add_representer(cls, the_repr )
 
   return dataclass(cls)
+
+
+
+def yes_no_absent_or_dict(e, prop, on_absent, raised_error=None):
+  if prop not in e:
+    return on_absent
+  if e[prop] == "yes":
+    return True
+  if e[prop] == "no":
+    return False
+  if isinstance(e[prop], bool):
+    return e[prop]
+  if raised_error:
+    raise ValueError(f"{raised_error}: {prop} must either be `yes` or `no` (or alltogether absent for `no`)")
+
+
+def is_yes(v):
+  if v == "yes":
+    return True
+  elif v == True:
+    return True
+
+
+
+def date_or_datetime(value):
+  for fmt in ('%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d\'%H:%M:%S'):
+    try:
+      return datetime.strptime(value, fmt)
+    except ValueError:
+      continue
+  raise argparse.ArgumentTypeError(f"Not a valid date or datetime: '{value}'.")
