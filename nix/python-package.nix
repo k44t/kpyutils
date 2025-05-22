@@ -1,4 +1,4 @@
-{ lib, buildPythonPackage, python3Packages, rsync, python3, tree }:
+{ lib, buildPythonPackage, python3Packages, rsync, python3, poetry-core }:
 
 
 
@@ -7,12 +7,16 @@ buildPythonPackage rec {
   pname = "kpyutils";
   version = "0.1.0";
 
-  src = ./..;
-  sourceRoot = ./..;
+  src = builtins.path { path = ./..; };
 
   nativeBuildInputs = [
-    tree
+    rsync
+    poetry-core
   ];
+
+  unpackPhase = ''
+    rsync -av --no-perms --no-group --no-owner ${src}/ ./
+  '';
 
   propagatedBuildInputs = with python3Packages; [
     pyyaml
@@ -23,7 +27,7 @@ buildPythonPackage rec {
 
 
   doCheck = false;
-  dontUnpack = true;
+  # dontUnpack = true;
 
   meta = with lib; {
     description = "some utility functions";
