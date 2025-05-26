@@ -172,6 +172,8 @@ class TabbedShiftexStream():
 
 class KdStream:
   def __init__(self, stream, level = -1):
+    if not isinstance(stream, TabbedShiftexStream):
+      stream = TabbedShiftexStream(stream)
     self.stream = stream
     self.level = level
 
@@ -202,14 +204,7 @@ class KdStream:
         self.stream.print_raw("[]")
       else:
         self.stream.print_raw("[:")
-        self.stream.indent()
-        for i, element in enumerate(obj):
-          # self.stream.print_raw("||")
-          self.stream.newline()
-          # self.stream.print_raw(">>")
-          self.print_obj(element)
-          # self.stream.print_raw("<<")
-        self.stream.dedent()
+        self.print_indented_list_content(obj)
     elif isinstance(obj, dict):
       self.stream.print_raw("{:")
       self.stream.indent()
@@ -231,6 +226,47 @@ class KdStream:
     self.level = self.level + 1
 
 
+  def print_list_content(self, lst):
+
+    for i, element in enumerate(lst):
+      # self.stream.print_raw("||")
+      self.stream.newline()
+      # self.stream.print_raw(">>")
+      self.print_obj(element)
+      # self.stream.print_raw("<<")
+  def print_indented_list_content(self, lst):
+
+    self.stream.indent()
+    self.print_list_content(lst)
+    self.stream.dedent()
+  
+  def print_class_name(self, obj):
+    self.stream.print_raw(type(obj).__name__)
+
+  def indent(self):
+    self.stream.indent()
+  
+  def dedent(self):
+    self.stream.dedent()
+
+  def print_raw(self, string):
+    self.stream.print_raw(string)
+
+  def print_property_prefix(self, prop):
+    self.stream.newline()
+    # self.stream.print_raw("..>>")
+    self.stream.print_raw(prop)
+    self.stream.print_raw(": ")
+
+  def print_property_and_value(self, prop, val):
+    self.print_property_prefix(prop)
+    if callable(val):
+      self.stream.print_raw("fn ...")
+    else:
+      # self.stream.print_raw("|||")
+      self.print_obj(val)
+      # self.stream.print_raw("<<..")
+
 
   def print_python_obj(self, obj):
     attrs = dir(obj)
@@ -239,29 +275,29 @@ class KdStream:
       if not (attr.startswith("_") or callable(getattr(obj, attr))):
         nattrs.append(attr)
     self.print_partial_obj(obj, nattrs)
+  
+  def print_property(self, obj, prop):
+    return self.print_property_and_value(prop, getattr(obj, prop))
+  
+  def newlines(self, num):
+    self.stream.newlines(num)
+
+  def newline(self):
+    self.stream.newline()
+
 
   def print_partial_obj(self, obj, props: List[str]):
     if self.level == 0:
       self.stream.print_raw("...")
       return
-    self.stream.print_raw(obj.__class__.__name__)
+    self.print_class_name(obj)
     self.stream.indent()
     if len(props) > 0:
       for prop in props:
         if hasattr(obj, prop):
           # self.stream.print_raw("..nl>")
-          self.stream.newline()
           # self.stream.print_raw("..<nl")
-
-          # self.stream.print_raw("..>>")
-          self.stream.print_raw(prop)
-          self.stream.print_raw(": ")
-          if callable(getattr(obj, prop)):
-            self.stream.print_raw("fn ...")
-          else:
-            # self.stream.print_raw("|||")
-            self.print_obj(getattr(obj, prop))
-            # self.stream.print_raw("<<..")
+          self.print_property(obj, prop)
     else:
       self.stream.print_raw("!")
     self.stream.dedent()
@@ -327,8 +363,8 @@ def yaml_data(cls):
   def the_constr(loader, node):
     # https://github.com/yaml/pyyaml/blob/main/lib/yaml/constructor.py  
     values = loader.construct_mapping(node)
-    import inspect
-    print(inspect.signature(cls.__init__).parameters)
+    # import inspect
+    # print(inspect.signature(cls.__init__).parameters)
     return cls(**values)
     # return loader.construct_yaml_object(node, cls)
   def the_repr(dumper, data):
@@ -369,4 +405,4 @@ def date_or_datetime(value):
       return datetime.strptime(value, fmt)
     except ValueError:
       continue
-  raise argparse.ArgumentTypeError(f"Not a valid date or datetime: '{value}'.")
+  raise ValueError(f"Not a valid date or datetime: '{value}'.")
