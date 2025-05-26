@@ -7,6 +7,7 @@ import numbers
 from typing import List
 import yaml
 
+
 def convert_dict_to_strutex(dictionary):
   for key, value in dictionary.items():
     result_string = result_string + f"\n\t{key}:: {value}"
