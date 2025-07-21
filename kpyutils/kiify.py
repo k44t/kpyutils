@@ -6,6 +6,7 @@ from datetime import datetime
 import numbers
 from typing import List
 import yaml
+import inspect
 
 
 def convert_dict_to_strutex(dictionary):
@@ -212,7 +213,7 @@ class KdStream:
       for i, (key, value) in enumerate(obj.items()):
         self.stream.newline()
         self.print_obj(key)
-        self.stream.print_raw(":")
+        self.stream.print_raw(": ")
         self.stream.indent()
         self.print_obj(value)
         self.stream.dedent()
@@ -221,6 +222,8 @@ class KdStream:
       self.stream.print_raw("nil")
     elif hasattr(obj, "__kiify__") and callable(obj.__kiify__):
       obj.__kiify__(self)
+    elif inspect.isfunction(obj) or inspect.ismethod(obj):
+      self.stream.print_raw("fn ...")
     else:
       self.print_python_obj(obj)
 
@@ -259,14 +262,12 @@ class KdStream:
     self.stream.print_raw(prop)
     self.stream.print_raw(": ")
 
+  def print_property_value(self, prop):
+    self.stream.print_obj(getattr(self, prop))
+
   def print_property_and_value(self, prop, val):
     self.print_property_prefix(prop)
-    if callable(val):
-      self.stream.print_raw("fn ...")
-    else:
-      # self.stream.print_raw("|||")
-      self.print_obj(val)
-      # self.stream.print_raw("<<..")
+    self.print_obj(val)
 
 
   def print_python_obj(self, obj):
@@ -277,8 +278,11 @@ class KdStream:
         nattrs.append(attr)
     self.print_partial_obj(obj, nattrs)
   
-  def print_property(self, obj, prop):
-    return self.print_property_and_value(prop, getattr(obj, prop))
+  def print_property(self, obj, prop, hide_if_empty=False):
+    val = getattr(obj, prop)
+    if hide_if_empty and val is None:
+      return
+    return self.print_property_and_value(prop, val)
   
   def newlines(self, num):
     self.stream.newlines(num)
@@ -303,14 +307,10 @@ class KdStream:
       self.stream.print_raw("!")
     self.stream.dedent()
 
-  def get_string_from_object(self, obj):
-    if isinstance(self.stream, StringBuilder):
-      self.print_obj(obj)
-      return self.stream.stream.get_string()
-    else:
-      error_message = "get_string_from_object is not implemented for anything other than a stream of type StringBuilder"
-      raise NotImplementedError(error_message)
-
+def object_to_kdstring(obj):
+  kdstream = KdStream(StringBuilder())
+  kdstream.print_obj(obj)
+  return kdstream.stream.stream.get_string()
 
 
 def to_kd(o):
@@ -392,11 +392,28 @@ def yes_no_absent_or_dict(e, prop, on_absent, raised_error=None):
     raise ValueError(f"{raised_error}: {prop} must either be `yes` or `no` (or alltogether absent for `no`)")
 
 
+
 def is_yes(v):
   if v == "yes":
     return True
   elif v == True:
     return True
+
+
+
+def is_yes_or_true(v):
+  if v == "yes":
+    return True
+  if v == "true":
+    return True
+  elif v == True:
+    return True
+  
+def to_yes(v):
+  if is_yes_or_true(v):
+    return "yes"
+  else:
+    return "no"
 
 
 
