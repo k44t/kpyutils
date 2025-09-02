@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "kpyutils"
-version = "0.1.2"
+version = "0.1.2b1"
 description = ""
-authors = ["IamK <iamk@k44.at>"]
+authors = []
 readme = "README.md"
 
 [tool.poetry.dependencies]

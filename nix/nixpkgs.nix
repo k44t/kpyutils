@@ -8,6 +8,7 @@
     in
     {
       kpyutils = kpyutils;
+      /*
       python3Packages = prev.python3Packages // {
         kpyutils = kpyutils;
       };
@@ -20,6 +21,7 @@
       python3 = prev.python3 // {
         kpyutils = kpyutils;
       };
+      */
     })
   ];
 

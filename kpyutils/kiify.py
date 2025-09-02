@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from io import StringIO
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timedelta
 import numbers
 from typing import List
 import yaml
@@ -92,7 +92,6 @@ class StringBuilder:
 
   def __init__(self):
     self._file_str = StringIO()
-    self.string = ""
 
   def append(self, string):
     self._file_str.write(string)
@@ -102,15 +101,16 @@ class StringBuilder:
     return self._file_str.getvalue()
 
   def write(self, text):
-    self.string = self.string + text
+    self.append(text)
 
   def print_raw(self, text):
-    self.string = self.string + text
+    self.append(text)
 
   def get_string(self):
-    return_string = self.string
-    self.string = ""
-    return return_string
+    return self._file_str.getvalue()
+  
+  def flush(self):
+    return
 
 
 
@@ -179,7 +179,7 @@ class KdStream:
     self.stream = stream
     self.level = level
 
-  def print_obj(self, obj):
+  def print_obj(self, obj, nil="nil"):
     if self.level == 0:
       self.stream.print_raw("...\n")
       return
@@ -200,7 +200,12 @@ class KdStream:
     elif isinstance(obj, numbers.Number):
       self.stream.print_raw(str(obj))
     elif isinstance(obj, datetime):
-      self.stream.print_raw(obj.strftime("%Y-%m-%d'%H:%M:%S.%f"))
+      if obj.microsecond == 0:
+        self.stream.print_raw(obj.strftime("%Y-%m-%d'%H:%M:%S"))
+      else:
+        self.stream.print_raw(obj.strftime("%Y-%m-%d'%H:%M:%S.%f"))
+    elif isinstance(obj, timedelta):
+      self.print_obj(datetime(1,1,1) + obj)
     elif isinstance(obj, list):
       if len(obj) == 0:
         self.stream.print_raw("[]")
@@ -219,7 +224,7 @@ class KdStream:
         self.stream.dedent()
       self.stream.dedent()
     elif obj is None:
-      self.stream.print_raw("nil")
+      self.stream.print_raw(nil)
     elif hasattr(obj, "__kiify__") and callable(obj.__kiify__):
       obj.__kiify__(self)
     elif inspect.isfunction(obj) or inspect.ismethod(obj):
@@ -265,9 +270,9 @@ class KdStream:
   def print_property_value(self, prop):
     self.stream.print_obj(getattr(self, prop))
 
-  def print_property_and_value(self, prop, val):
+  def print_property_and_value(self, prop, val, nil="nil"):
     self.print_property_prefix(prop)
-    self.print_obj(val)
+    self.print_obj(val, nil=nil)
 
 
   def print_python_obj(self, obj):
@@ -278,11 +283,11 @@ class KdStream:
         nattrs.append(attr)
     self.print_partial_obj(obj, nattrs)
   
-  def print_property(self, obj, prop, hide_if_empty=False):
+  def print_property(self, obj, prop, hide_if_empty=False, nil="nil"):
     val = getattr(obj, prop)
     if hide_if_empty and val is None:
       return
-    return self.print_property_and_value(prop, val)
+    return self.print_property_and_value(prop, val, nil=nil)
   
   def newlines(self, num):
     self.stream.newlines(num)
@@ -313,11 +318,16 @@ def object_to_kdstring(obj):
   return kdstream.stream.stream.get_string()
 
 
-def to_kd(o):
+def to_kd_or_none(o):
+  if o is None:
+    return None
+  return to_kd(o)
+
+def to_kd(o, nil="nil"):
   b = StringBuilder()
   s = KdStream(TabbedShiftexStream(b))
-  s.print_obj(o)
-  return b.string
+  s.print_obj(o, nil=nil)
+  return b.get_string()
 
 def to_ki_enum(data: Enum):
   return "#" + data.name.lower().replace("_", "-")
