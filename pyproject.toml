@@ -2,7 +2,7 @@
 name = "kpyutils"
 version = "0.1.2b1"
 description = ""
-authors = []
+authors = ["devvythelopper"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
