@@ -11,7 +11,6 @@ import inspect
 
 
 def special_ki_from_json(dct: dict):
-  raise ValueError("bug")
   if "_type" in dct:
     if dct["_type"] == "Ki-Symbol":
       return KiSymbol.__from_json__(dct)
@@ -22,7 +21,6 @@ def special_ki_from_json(dct: dict):
 
 
 def special_ki_to_json(dt):
-  raise ValueError("bug")
   if hasattr(dt, "__to_json__"):
     return dt.__to_json__()
   else:
