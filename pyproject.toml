@@ -28,7 +28,6 @@ tabulate = ">=0.9.0"
 [tool.poetry.group.dev.dependencies]
 debugpy = ">=1.8.14"
 pytest = ">=8.3.5"
-argparse-manpage = { path = "../argparse-manpage", develop = true } # "^4.7"
 toml = ">=0.10.2"
 dunamai = ">=1.0.0"
 
