@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "kpyutils"
-version = "0.1.2b1"
+version = "0.1.2b2"
 description = ""
 authors = ["devvythelopper"]
 readme = "README.md"

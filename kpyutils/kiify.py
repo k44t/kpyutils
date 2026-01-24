@@ -9,6 +9,53 @@ import yaml
 import inspect
 
 
+
+def special_ki_from_json(dct: dict):
+  if "_type" in dct:
+    if dct["_type"] == "Ki-Symbol":
+      return KiSymbol.__from_json__(dct)
+    elif dct["_type"] == "Ki-Keyword":
+      return KiKeyword.__from_json__(dct)
+  return dct
+
+
+
+def special_ki_to_json(dt):
+  if hasattr(dt, "__to_json__"):
+    return dt.__to_json__()
+  else:
+    return dt
+
+@dataclass
+class KiSymbol:
+  name: str
+
+  def __kiify__(self, stream):
+    stream.print_raw(f"#{self.name}")
+
+
+  def __to_json__(self):
+    return {"_type": "Ki-Symbol", "_name": self.name.lower().replace("_", "-")}
+  
+  @classmethod
+  def __from_json__(cls, json):
+    return KiSymbol(json["_name"])
+
+
+@dataclass
+class KiKeyword:
+  name: str
+
+  def __kiify__(self, stream):
+    stream.print_raw(self.name)
+
+  def __to_json__(self):
+    return {"_type": "Ki-Keyword", "_name": self.name.lower().replace("_", "-")}
+  
+  @classmethod
+  def __from_json__(cls, json):
+    return KiKeyword(json["_name"])
+
 def convert_dict_to_strutex(dictionary):
   for key, value in dictionary.items():
     result_string = result_string + f"\n\t{key}:: {value}"
@@ -138,6 +185,9 @@ class KiEnum(Enum):
   def __kiify__(self, ki_stream):
     ki_stream.stream.print_raw("#" + self.name.lower().replace("_", "-"))
 
+  def __to_json__(self):
+    return {"_type": "Ki-Enum", "_name": self.name.lower().replace("_", "-")}
+
 
 
 class TabbedShiftexStream():
@@ -179,7 +229,7 @@ class KdStream:
     self.stream = stream
     self.level = level
 
-  def print_obj(self, obj, nil="nil"):
+  def print_obj(self, obj, nil=KiKeyword("nil")):
     if self.level == 0:
       self.stream.print_raw("...\n")
       return
@@ -224,7 +274,7 @@ class KdStream:
         self.stream.dedent()
       self.stream.dedent()
     elif obj is None:
-      self.stream.print_raw(nil)
+      self.print_obj(nil)
     elif hasattr(obj, "__kiify__") and callable(obj.__kiify__):
       obj.__kiify__(self)
     elif inspect.isfunction(obj) or inspect.ismethod(obj):
@@ -270,7 +320,7 @@ class KdStream:
   def print_property_value(self, prop):
     self.stream.print_obj(getattr(self, prop))
 
-  def print_property_and_value(self, prop, val, nil="nil"):
+  def print_property_and_value(self, prop, val, nil=KiKeyword("nil")):
     self.print_property_prefix(prop)
     self.print_obj(val, nil=nil)
 
@@ -283,10 +333,8 @@ class KdStream:
         nattrs.append(attr)
     self.print_partial_obj(obj, nattrs)
   
-  def print_property(self, obj, prop, hide_if_empty=False, nil="nil"):
+  def print_property(self, obj, prop, hide_if_empty=False, nil=KiKeyword("nil")):
     val = getattr(obj, prop)
-    if hide_if_empty and val is None:
-      return
     return self.print_property_and_value(prop, val, nil=nil)
   
   def newlines(self, num):
@@ -323,7 +371,7 @@ def to_kd_or_none(o):
     return None
   return to_kd(o)
 
-def to_kd(o, nil="nil"):
+def to_kd(o, nil=KiKeyword("nil")):
   b = StringBuilder()
   s = KdStream(TabbedShiftexStream(b))
   s.print_obj(o, nil=nil)
@@ -338,6 +386,7 @@ def from_ki_enum(cls, string: str):
   if r is None:
     raise ValueError(f"`{string}` (`{fixed}`) is not an instance of {cls.__class__.__name__}")
   return r
+
 
 
 def yaml_enum(cls):
@@ -434,3 +483,11 @@ def date_or_datetime(value):
     except ValueError:
       continue
   raise ValueError(f"Not a valid date or datetime: '{value}'.")
+
+
+
+def to_kd_date(value):
+  if isinstance(value, datetime) or isinstance(value, timedelta):
+    return to_kd(value)
+  else:
+    return value

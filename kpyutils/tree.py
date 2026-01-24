@@ -5,8 +5,12 @@ import os
 import natsort
 
 
+def raise_exception(exception: BaseException):
+  raise exception
 
-def map_tree(is_branch, list_children, path, handle_leaf = None, handle_branch = None):
+
+
+def map_tree(is_branch, list_children, path, handle_leaf = None, handle_branch = None, handle_exception=raise_exception):
   def do_handle_leaf(path, lst):
     r = None
     if handle_leaf is not None:
@@ -21,7 +25,7 @@ def map_tree(is_branch, list_children, path, handle_leaf = None, handle_branch =
     return lst
 
     
-  return fold_tree(is_branch, list_children, path, [], do_handle_branch, do_handle_leaf)
+  return fold_tree(is_branch, list_children, path, [], do_handle_branch, do_handle_leaf, handle_exception)
 
 def sorted_list_dir(path):
   r = os.listdir(path)
@@ -29,11 +33,33 @@ def sorted_list_dir(path):
     return f"{path}/{child}"
   return map(concat, natsort.natsorted(r))
 
-def map_file_tree(path, handle_leaf = None, handle_branch = None):
-  return map_tree(os.path.isdir, sorted_list_dir, path, handle_branch= handle_branch, handle_leaf=handle_leaf)
+def map_file_tree(path, handle_leaf = None, handle_branch = None, handle_exception=raise_exception):
 
-def fold_file_tree(path, folded, handle_leaf = None, handle_branch = None):
-  return fold_tree(os.path.isdir, sorted_list_dir, path, folded, handle_branch= handle_branch, handle_leaf=handle_leaf)
+  def is_branch(path):
+    try:
+      return os.path.isdir(path)
+    except BaseException as ex:
+      handle_exception(ex)
+  def list_children(path):
+    try:
+      return sorted_list_dir(path)
+    except BaseException as ex:
+      handle_exception(ex)
+
+  return map_tree(is_branch, list_children, path, handle_branch= handle_branch, handle_leaf=handle_leaf)
+
+def fold_file_tree(path, folded, handle_leaf = None, handle_branch = None, handle_exception=raise_exception):
+  def is_branch(path):
+    try:
+      return os.path.isdir(path)
+    except BaseException as ex:
+      return handle_exception(ex)
+  def list_children(path):
+    try:
+      return sorted_list_dir(path)
+    except BaseException as ex:
+      return handle_exception(ex)
+  return fold_tree(is_branch, list_children, path, folded, handle_branch= handle_branch, handle_leaf=handle_leaf)
 
 def fold_tree(is_branch, list_children, path, folded, handle_branch = None, handle_leaf = None):
   if is_branch(path):
@@ -45,3 +71,17 @@ def fold_tree(is_branch, list_children, path, folded, handle_branch = None, hand
     return folded
   elif handle_leaf is not None:
     return handle_leaf(path, folded)
+  
+
+def handle_file_tree(path, handle_leaf = None, handle_branch = None, handle_exception = raise_exception):
+  do_leaf = None
+  if handle_leaf:
+    def do_leaf(path, folded):
+      return handle_leaf(path)
+  do_branch = None
+  if handle_branch:
+    def do_branch(path, folded):
+      return handle_branch(path)
+  
+
+  fold_file_tree(path, None, handle_branch=do_branch, handle_leaf=do_leaf, handle_exception=handle_exception)
