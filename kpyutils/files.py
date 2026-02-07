@@ -16,7 +16,7 @@ def add_pre_suffix(path, suffix):
 def list_subdirs(path):
    return [x for x in os.listdir(path) if os.path.isdir(x)]
 
-def load_module_from_file(path)
+def load_module_from_file(path):
   module_name = path.replace(os.sep, '.')
   module_name = re.sub(r'\.(\d)', r'._\1', module_name)  # Prefix digits after dots with an underscore
   module_name = re.sub(r'\W|^(?=\d)', '_', module_name)  # Replace non-word characters and handle leading digits

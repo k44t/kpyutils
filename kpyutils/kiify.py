@@ -92,6 +92,12 @@ def escape_ki_string(delim, string):
   return str(result)
 
 
+def escape_and_delimit_ki_string(delim, string):
+  r = escape_ki_string(delim, string)
+  return delim + r + delim
+  
+
+
 def escape_ki_string_backslash(result, string, index, delim, backslashes):# pylint: disable=unused-argument
   if string[index] == "\\":
     return escape_ki_string_backslash,  index + 1, backslashes.append("\\")
@@ -284,6 +290,12 @@ class KdStream:
 
     self.level = self.level + 1
 
+  def print_flag_if_set(self, obj, name):
+    if getattr(obj, name):
+      self.newline()
+      self.print_raw(name)
+      self.print_raw('!')
+
 
   def print_list_content(self, lst):
 
@@ -311,14 +323,15 @@ class KdStream:
   def print_raw(self, string):
     self.stream.print_raw(string)
 
+  def print_property_value(self, obj, prop):
+    self.stream.print_obj(getattr(obj, prop))
+
   def print_property_prefix(self, prop):
     self.stream.newline()
     # self.stream.print_raw("..>>")
     self.stream.print_raw(prop)
     self.stream.print_raw(": ")
 
-  def print_property_value(self, prop):
-    self.stream.print_obj(getattr(self, prop))
 
   def print_property_and_value(self, prop, val, nil=KiKeyword("nil")):
     self.print_property_prefix(prop)
